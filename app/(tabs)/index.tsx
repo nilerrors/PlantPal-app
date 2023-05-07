@@ -6,6 +6,7 @@ import * as Location from "expo-location";
 import { Text, View } from "../../components/Themed";
 import { WiFiNetwork } from "../../components/Forms/WiFiNetwork";
 import { WIFI } from "../../constants/Wifi";
+import { CreatePlant } from "../../components/Forms/CreatePlant";
 
 export default function Home() {
   const [allNetworks, setAllNetworks] = useState<WifiManager.WifiEntry[]>([]);
@@ -14,6 +15,8 @@ export default function Home() {
   >(null);
   const [connected, setConnected] = useState(false);
   const [locationAccess, setLocationAccess] = useState<boolean>();
+  const [recheckLoading, setRecheckLoading] = useState(false);
+  const [showCreatePlant, setShowCreatePlant] = useState(false);
 
   const checkNetworkAvailability = async (first = false) => {
     const { status } = await Location.requestForegroundPermissionsAsync();
@@ -38,20 +41,22 @@ export default function Home() {
   };
 
   const connectToNetwork = async () => {
-    await WifiManager.connectToProtectedSSID(WIFI.ssid, WIFI.pass, false).then(
-      () => {
+    await WifiManager.connectToProtectedSSID(WIFI.ssid, WIFI.pass, false)
+      .then(() => {
         WifiManager.getCurrentWifiSSID().then((ssid) => {
           setConnected(ssid === WIFI.ssid);
         });
-      }
-    );
+      })
+      .catch((err) => {
+        console.log(err);
+      });
   };
 
   useEffect(() => {
     checkNetworkAvailability(true);
     const checkNetworkIsAvailable = setInterval(() => {
       checkNetworkAvailability();
-    }, 10000);
+    }, 3000);
     return () => clearInterval(checkNetworkIsAvailable);
   }, []);
 
@@ -81,11 +86,28 @@ export default function Home() {
         <>
           {ESPNetwork === null ? null : (
             <>
-              <Text style={styles.title}>Device found</Text>
-              <Text>{connected ? "and connected" : "but not connected"}</Text>
-              {!connected ? null : (
+              {!connected ? (
                 <>
-                  <WiFiNetwork allNetworks={allNetworks} />
+                  <Text style={styles.title}>Device found</Text>
+                  <Text>but not connected</Text>
+                </>
+              ) : (
+                <>
+                  {!showCreatePlant ? (
+                    <>
+                      <WiFiNetwork
+                        allNetworks={allNetworks.filter(
+                          (n) => n.SSID != WIFI.ssid
+                        )}
+                        refetchNetworks={() => checkNetworkAvailability()}
+                        onDeviceConnect={() => setShowCreatePlant(true)}
+                      />
+                    </>
+                  ) : (
+                    <>
+                      <CreatePlant />
+                    </>
+                  )}
                 </>
               )}
             </>
@@ -93,22 +115,35 @@ export default function Home() {
         </>
       )}
       <View style={styles.end}>
-        {connected ? null : (
+        {connected && ESPNetwork != undefined ? null : (
           <>
-            <Button
-              title={
-                ESPNetwork === null
-                  ? "Check if available"
-                  : ESPNetwork === undefined
-                  ? "Recheck if available"
-                  : "Connect"
-              }
-              onPress={() =>
-                ESPNetwork === null || ESPNetwork === undefined
-                  ? checkNetworkAvailability()
-                  : connectToNetwork()
-              }
-            />
+            {ESPNetwork === null ? (
+              <>
+                <Button
+                  title="Check if available"
+                  onPress={() => checkNetworkAvailability()}
+                />
+              </>
+            ) : null}
+            {ESPNetwork === undefined ? (
+              <>
+                <Button
+                  title={recheckLoading ? "Loading" : "Recheck if available"}
+                  disabled={recheckLoading}
+                  onPress={() => {
+                    setRecheckLoading(true);
+                    checkNetworkAvailability().then(() => {
+                      setRecheckLoading(false);
+                    });
+                  }}
+                />
+              </>
+            ) : null}
+            {ESPNetwork !== null && ESPNetwork !== undefined ? (
+              <>
+                <Button title="Connect" onPress={() => connectToNetwork()} />
+              </>
+            ) : null}
           </>
         )}
       </View>

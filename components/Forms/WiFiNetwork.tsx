@@ -7,13 +7,20 @@ import { FontAwesome } from "@expo/vector-icons";
 
 type Props = {
   allNetworks: WifiManager.WifiEntry[];
+  refetchNetworks: () => void;
+  onDeviceConnect?: () => void;
 };
 
-export function WiFiNetwork({ allNetworks }: Props) {
+export function WiFiNetwork({
+  allNetworks,
+  refetchNetworks,
+  onDeviceConnect,
+}: Props) {
   const [ssid, setSsid] = useState("");
-  const [pass, setPass] = useState<string>();
+  const [pass, setPass] = useState("");
   const [error, setError] = useState<string>();
   const [loading, setLoading] = useState(false);
+  const [isDeviceConnected, setIsDeviceConnected] = useState<boolean>(false);
 
   const handleSubmit = () => {
     if (ssid == "") {
@@ -25,9 +32,12 @@ export function WiFiNetwork({ allNetworks }: Props) {
       return;
     }
     setLoading(true);
+    const formData = new FormData();
+    formData.append("ssid", ssid);
+    formData.append("pass", pass);
     fetch("http://8.8.8.8/api/change_wifi", {
       method: "POST",
-      body: `?ssid=${ssid}&pass=${pass}`,
+      body: formData,
     })
       .then((res) => {
         console.log(res);
@@ -37,6 +47,8 @@ export function WiFiNetwork({ allNetworks }: Props) {
         setLoading(false);
         if (data.title == "Connection Successful") {
           setError(undefined);
+          setIsDeviceConnected(true);
+          onDeviceConnect?.();
           alert("Device is connected to network");
         } else {
           alert(data.title + ": " + data.message);
@@ -61,6 +73,7 @@ export function WiFiNetwork({ allNetworks }: Props) {
         <Text style={{ fontSize: 30 }}>Network SSID</Text>
         <SelectDropdown
           data={allNetworks.map((n) => n.SSID)}
+          onFocus={refetchNetworks}
           onSelect={(s) => {
             setSsid(s);
             setError(undefined);
@@ -108,6 +121,9 @@ export function WiFiNetwork({ allNetworks }: Props) {
           secureTextEntry={true}
           value={pass}
         />
+        {
+          // TODO: add checkbox to save these values
+        }
         <View style={{ marginTop: "20%" }}>
           <Button
             title={loading ? "Loading..." : "Submit"}
