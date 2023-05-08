@@ -8,8 +8,9 @@ import { useFonts } from "expo-font";
 import { SplashScreen, Stack } from "expo-router";
 import { useEffect } from "react";
 import { useColorScheme } from "react-native";
+import { Text } from "../components/Themed";
 import { SetupPage } from "../components/SetupPage";
-import { SetupContextProvider, useSetup } from "../contexts/SetupContext";
+import { AccountContextProvider, useAccount } from "../contexts/AccountContext";
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -37,9 +38,9 @@ export default function RootLayout() {
       {/* Keep the splash screen open until the assets have loaded. In the future, we should just support async font loading with a native version of font-display. */}
       {!loaded && <SplashScreen />}
       {loaded && (
-        <SetupContextProvider>
+        <AccountContextProvider>
           <RootLayoutNav />
-        </SetupContextProvider>
+        </AccountContextProvider>
       )}
     </>
   );
@@ -47,10 +48,12 @@ export default function RootLayout() {
 
 function RootLayoutNav() {
   const colorScheme = useColorScheme();
-  const { isSetupDone } = useSetup();
+  const { loading, isSetupDone } = useAccount();
 
-  if (isSetupDone === undefined) {
-    return null;
+  console.log(isSetupDone);
+
+  if (loading) {
+    return <SplashScreen />;
   }
 
   return (

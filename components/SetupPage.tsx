@@ -1,7 +1,7 @@
 import { Button, TextInput } from "react-native";
 import { View, Text } from "./Themed";
 import { useRef, useState } from "react";
-import { useAccount } from "../utils/account";
+import { useAccount } from "../contexts/AccountContext";
 
 export function SetupPage() {
   const { set: setAccount } = useAccount();
@@ -24,7 +24,8 @@ export function SetupPage() {
     setLoading(true);
     setAccount(email, pass)
       .then(({ res, data }) => {
-        console.log(res, data);
+        console.log(JSON.stringify(res));
+        console.log(JSON.stringify(data));
         setLoading(false);
       })
       .catch((err) => {

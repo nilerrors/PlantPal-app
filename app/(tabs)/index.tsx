@@ -77,6 +77,12 @@ export default function Home() {
 
   return (
     <View style={styles.container}>
+      <CreatePlant onCreatePlant={() => {}} />
+    </View>
+  );
+
+  return (
+    <View style={styles.container}>
       {ESPNetwork === undefined ? (
         <>
           <Text style={styles.title}>Network Not Found</Text>
