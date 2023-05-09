@@ -42,12 +42,15 @@ export function WiFiNetwork({
       return;
     }
     setLoading(true);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15);
     const formData = new FormData();
     formData.append("ssid", ssid);
     formData.append("pass", pass);
     fetch("http://8.8.8.8/api/change_wifi", {
       method: "POST",
       body: formData,
+      signal: controller.signal,
     })
       .then((res) => {
         console.log(res);
@@ -70,8 +73,13 @@ export function WiFiNetwork({
       .catch((err) => {
         setLoading(false);
         console.log(err);
+        if (err.name == "AbortError") {
+          setError("Request took too long");
+          return;
+        }
         setError(JSON.stringify(err));
       });
+    clearTimeout(timeout);
   };
 
   return (

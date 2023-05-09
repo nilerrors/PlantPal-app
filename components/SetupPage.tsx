@@ -4,13 +4,12 @@ import { useRef, useState } from "react";
 import { useAccount } from "../contexts/AccountContext";
 
 export function SetupPage() {
-  const { set: setAccount } = useAccount();
+  const { set: setAccount, isSetupDone, loading } = useAccount();
   const passInput = useRef<TextInput>({} as TextInput);
 
   const [email, setEmail] = useState("");
   const [pass, setPass] = useState("");
   const [errorLogin, setErrorLogin] = useState<string>();
-  const [loading, setLoading] = useState(false);
 
   const handleLogin = () => {
     if (email == "") {
@@ -21,16 +20,18 @@ export function SetupPage() {
       setErrorLogin("Password should be provided");
       return;
     }
-    setLoading(true);
     setAccount(email, pass)
       .then(({ res, data }) => {
         console.log(JSON.stringify(res));
         console.log(JSON.stringify(data));
-        setLoading(false);
       })
       .catch((err) => {
+        console.log(err);
+        if (err?.name == "AbortError") {
+          alert("The request took too long");
+          return;
+        }
         setErrorLogin(JSON.stringify(err));
-        setLoading(false);
       });
   };
 
@@ -87,7 +88,7 @@ export function SetupPage() {
           />
           <View style={{ marginTop: "20%" }}>
             <Button
-              title={loading ? "Loading..." : "Submit"}
+              title={!isSetupDone && loading ? "Loading..." : "Submit"}
               onPress={() => handleLogin()}
               disabled={loading}
             />

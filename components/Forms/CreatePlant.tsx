@@ -1,8 +1,6 @@
-import WifiManager from "react-native-wifi-reborn";
 import { useEffect, useState } from "react";
-import { Button, TextInput, View } from "react-native";
+import { Button, TextInput, View, useColorScheme } from "react-native";
 import { Checkbox } from "expo-checkbox";
-import SelectDropdown from "react-native-select-dropdown";
 import { Text } from "../Themed";
 import { FontAwesome } from "@expo/vector-icons";
 import { useAccount } from "../../contexts/AccountContext";
@@ -18,7 +16,6 @@ export function CreatePlant({ onCreatePlant }: Props) {
   const [saveForNext, setSaveForNext] = useState(true);
   const [error, setError] = useState<string>();
   const [loading, setLoading] = useState(false);
-  const [isDeviceConnected, setIsDeviceConnected] = useState<boolean>(false);
 
   const { user } = useAccount();
 
@@ -37,12 +34,15 @@ export function CreatePlant({ onCreatePlant }: Props) {
       return;
     }
     setLoading(true);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
     const formData = new FormData();
     formData.append("email", email);
     formData.append("pass", pass);
     fetch("http://8.8.8.8/api/create_plant", {
       method: "POST",
       body: formData,
+      signal: controller.signal,
     })
       .then((res) => {
         console.log(res);
@@ -52,16 +52,21 @@ export function CreatePlant({ onCreatePlant }: Props) {
         setLoading(false);
         if (data.title == "Connection Successful") {
           setError(undefined);
-          setIsDeviceConnected(true);
           alert("Device is connected to network");
         } else {
           alert(data.title + ": " + data.message);
         }
+        clearTimeout(timeout);
       })
       .catch((err) => {
         setLoading(false);
         console.log(err);
-        setError(JSON.stringify(err));
+        if (err?.name == "AbortError") {
+          setError("Request took too long");
+        } else {
+          setError(JSON.stringify(err));
+        }
+        clearTimeout(timeout);
       });
   };
 
@@ -79,7 +84,12 @@ export function CreatePlant({ onCreatePlant }: Props) {
             <View style={{ marginVertical: "3%" }}></View>
           </>
         )}
-        <Text style={{ fontSize: 30 }}>Email</Text>
+        <Text
+          style={{ fontSize: 30 }}
+          info="Account e-mail, for which the plant should be added"
+        >
+          Email
+        </Text>
         <TextInput
           style={{
             borderColor: "white",
@@ -97,7 +107,12 @@ export function CreatePlant({ onCreatePlant }: Props) {
           value={email}
         />
         <View style={{ marginVertical: "2%" }}></View>
-        <Text style={{ fontSize: 30 }}>Password</Text>
+        <Text
+          style={{ fontSize: 30 }}
+          info="Account password, for which the plant should be added"
+        >
+          Password
+        </Text>
         <TextInput
           style={{
             borderColor: "white",

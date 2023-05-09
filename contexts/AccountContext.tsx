@@ -43,30 +43,39 @@ export function AccountContextProvider(props: {
     pass: string
   ): Promise<{ res: Response; data: any }> {
     setLoading(true);
-    const res = await fetch(API_URL + "/auth/login", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
+    const controller = new AbortController();
+    try {
+      const timeout = setTimeout(() => controller.abort(), 8000);
+      const res = await fetch(API_URL + "/auth/login", {
+        method: "POST",
+        signal: controller.signal,
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email,
+          password: pass,
+          remember: true,
+        }),
+      });
+      clearTimeout(timeout);
+      const data = await res.json();
+      setLoading(false);
+      if (!res.ok) {
+        return Promise.reject(data.detail ?? data.message ?? "Error");
+      }
+
+      await setAccount(email, pass);
+      await setAccountData({
         email,
-        password: pass,
-        remember: true,
-      }),
-    });
-    const data = await res.json();
-    setLoading(false);
-    if (!res.ok) {
-      return Promise.reject(data.detail ?? data.message ?? "Error");
+        pass,
+      });
+
+      return { res, data };
+    } catch (err) {
+      setLoading(false);
+      return Promise.reject(err);
     }
-
-    setAccount(email, pass);
-    setAccountData({
-      email,
-      pass,
-    });
-
-    return { res, data };
   }
 
   async function logout() {

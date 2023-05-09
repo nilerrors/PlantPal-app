@@ -52,10 +52,6 @@ function RootLayoutNav() {
 
   console.log(isSetupDone);
 
-  if (loading) {
-    return <SplashScreen />;
-  }
-
   return (
     <>
       <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
@@ -64,9 +60,15 @@ function RootLayoutNav() {
             <SetupPage />
           </>
         ) : (
-          <Stack>
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          </Stack>
+          <>
+            {loading ? (
+              <SplashScreen />
+            ) : (
+              <Stack>
+                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+              </Stack>
+            )}
+          </>
         )}
       </ThemeProvider>
     </>
