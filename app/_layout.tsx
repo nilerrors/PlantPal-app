@@ -11,6 +11,7 @@ import { useColorScheme } from "react-native";
 import { Text } from "../components/Themed";
 import { SetupPage } from "../components/SetupPage";
 import { AccountContextProvider, useAccount } from "../contexts/AccountContext";
+import { NetworkContextProvider } from "../contexts/NetworkContext";
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -64,9 +65,14 @@ function RootLayoutNav() {
             {loading ? (
               <SplashScreen />
             ) : (
-              <Stack>
-                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-              </Stack>
+              <NetworkContextProvider>
+                <Stack>
+                  <Stack.Screen
+                    name="(tabs)"
+                    options={{ headerShown: false }}
+                  />
+                </Stack>
+              </NetworkContextProvider>
             )}
           </>
         )}

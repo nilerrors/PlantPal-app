@@ -1,12 +1,11 @@
 import { useEffect, useState } from "react";
-import { Button, TextInput, View, useColorScheme } from "react-native";
+import { Button, TextInput, View } from "react-native";
 import { Checkbox } from "expo-checkbox";
 import { Text } from "../Themed";
-import { FontAwesome } from "@expo/vector-icons";
 import { useAccount } from "../../contexts/AccountContext";
 
 type Props = {
-  onCreatePlant?: (id: string) => void;
+  onCreatePlant: (id: string) => void;
 };
 // TODO; finish this form
 // After that add a form for network name change
@@ -14,6 +13,7 @@ export function CreatePlant({ onCreatePlant }: Props) {
   const [email, setEmail] = useState("");
   const [pass, setPass] = useState("");
   const [saveForNext, setSaveForNext] = useState(true);
+  const [alreadySumbitted, setAlreadySubmitted] = useState(false);
   const [error, setError] = useState<string>();
   const [loading, setLoading] = useState(false);
 
@@ -26,7 +26,7 @@ export function CreatePlant({ onCreatePlant }: Props) {
 
   const handleSubmit = () => {
     if (email == "") {
-      setError("No value given for SSID");
+      setError("No value given for Email");
       return;
     }
     if (pass == "") {
@@ -39,7 +39,7 @@ export function CreatePlant({ onCreatePlant }: Props) {
     const formData = new FormData();
     formData.append("email", email);
     formData.append("pass", pass);
-    fetch("http://8.8.8.8/api/create_plant", {
+    fetch("http://192.168.1.1/api/create_plant", {
       method: "POST",
       body: formData,
       signal: controller.signal,
@@ -52,10 +52,12 @@ export function CreatePlant({ onCreatePlant }: Props) {
         setLoading(false);
         if (data.title == "Connection Successful") {
           setError(undefined);
+          onCreatePlant(data.payload.id);
           alert("Device is connected to network");
         } else {
           alert(data.title + ": " + data.message);
         }
+        setAlreadySubmitted(true);
         clearTimeout(timeout);
       })
       .catch((err) => {
@@ -101,7 +103,7 @@ export function CreatePlant({ onCreatePlant }: Props) {
             fontSize: 30,
           }}
           onChangeText={(value) => {
-            setPass(value);
+            setEmail(value);
             setError(undefined);
           }}
           value={email}
@@ -148,6 +150,15 @@ export function CreatePlant({ onCreatePlant }: Props) {
             disabled={loading}
           />
         </View>
+        {!alreadySumbitted ? null : (
+          <View style={{ marginTop: "5%" }}>
+            <Button
+              title="Skip"
+              onPress={() => onCreatePlant("")}
+              disabled={loading}
+            />
+          </View>
+        )}
       </View>
     </>
   );

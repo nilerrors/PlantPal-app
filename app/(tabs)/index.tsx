@@ -1,66 +1,42 @@
 import { Button, Linking, StyleSheet } from "react-native";
 import React, { useEffect, useState } from "react";
 import WifiManager from "react-native-wifi-reborn";
-import * as Location from "expo-location";
 
 import { Text, View } from "../../components/Themed";
 import { WiFiNetwork } from "../../components/Forms/WiFiNetwork";
 import { WIFI } from "../../constants/Wifi";
 import { CreatePlant } from "../../components/Forms/CreatePlant";
+import { ChangeWifi } from "../../components/Forms/ChangeWifi";
+import { CustomDeviceCredentials } from "../../components/Forms/CustomDeviceCredentials";
+import { useNetwork } from "../../contexts/NetworkContext";
 
 export default function Home() {
-  const [allNetworks, setAllNetworks] = useState<WifiManager.WifiEntry[]>([]);
-  const [ESPNetwork, setESPNetwork] = useState<
-    WifiManager.WifiEntry | null | undefined
-  >(null);
-  const [connected, setConnected] = useState(false);
-  const [locationAccess, setLocationAccess] = useState<boolean>();
+  const {
+    allNetworks,
+    ESPNetwork,
+    isCustomNetwork,
+    setIsCustomNetwork,
+    wifi,
+    setWifi,
+    connected,
+    locationAccess,
+    checkNetworkAvailability,
+    connectToNetwork,
+    clear,
+  } = useNetwork();
+
   const [recheckLoading, setRecheckLoading] = useState(false);
-  const [showCreatePlant, setShowCreatePlant] = useState(false);
-
-  const checkNetworkAvailability = async (first = false) => {
-    const { status } = await Location.requestForegroundPermissionsAsync();
-    if (status !== "granted") {
-      console.log("Permission to access location was denied");
-      setLocationAccess(false);
-      return false;
-    }
-    setLocationAccess(true);
-
-    const list = (
-      first
-        ? await WifiManager.loadWifiList()
-        : await WifiManager.reScanAndLoadWifiList()
-    ).filter((n) => n.SSID != "(hidden SSID)");
-    setAllNetworks(list);
-    setESPNetwork(
-      list.filter((n) => n.SSID === WIFI.ssid).length === 0
-        ? undefined
-        : list.filter((n) => n.SSID === WIFI.ssid)[0]
-    );
-  };
-
-  const connectToNetwork = async () => {
-    await WifiManager.connectToProtectedSSID(WIFI.ssid, WIFI.pass, false)
-      .then(() => {
-        WifiManager.getCurrentWifiSSID().then((ssid) => {
-          setConnected(ssid === WIFI.ssid);
-        });
-      })
-      .catch((err) => {
-        console.log(err);
-      });
-  };
+  const [currentForm, setCurrentForm] = useState<
+    "wifi_cred" | "create_plant" | "change_wifi"
+  >();
+  const [currentPlantID, setCurrenPlantID] = useState<string>();
 
   useEffect(() => {
-    checkNetworkAvailability(true);
-    const checkNetworkIsAvailable = setInterval(() => {
-      checkNetworkAvailability();
-      WifiManager.getCurrentWifiSSID().then((ssid) =>
-        setConnected(ssid === WIFI.ssid)
-      );
-    }, 3000);
-    return () => clearInterval(checkNetworkIsAvailable);
+    WifiManager.getCurrentWifiSSID().then((ssid) => {
+      if (ssid !== wifi.ssid) {
+        setCurrentForm("wifi_cred");
+      }
+    });
   }, []);
 
   if (locationAccess !== undefined && !locationAccess) {
@@ -78,17 +54,6 @@ export default function Home() {
     );
   }
 
-  if (ESPNetwork === null) {
-    return (
-      <View style={styles.end}>
-        <Button
-          title="Check if available"
-          onPress={() => checkNetworkAvailability(true)}
-        />
-      </View>
-    );
-  }
-
   if (ESPNetwork === undefined) {
     return (
       <View style={styles.container}>
@@ -96,9 +61,26 @@ export default function Home() {
           <Text style={styles.title}>Device not found</Text>
           <Text style={{ textAlign: "center" }}>Device may be OFF</Text>
         </View>
+        {!isCustomNetwork ? null : <CustomDeviceCredentials />}
         <View style={styles.end}>
+          <View style={{ marginBottom: "2%" }}>
+            <Button
+              title={
+                !isCustomNetwork ? "Custom Device Name" : "Remove Custom Name"
+              }
+              color="#7393B3"
+              onPress={() => {
+                if (isCustomNetwork) {
+                  setWifi(WIFI);
+                } else {
+                  setWifi({ ssid: "", pass: "" });
+                }
+                setIsCustomNetwork(!isCustomNetwork);
+              }}
+            />
+          </View>
           <Button
-            title={recheckLoading ? "Loading" : "Recheck if available"}
+            title={recheckLoading ? "Loading" : "Reheck if available"}
             disabled={recheckLoading}
             onPress={() => {
               setRecheckLoading(true);
@@ -120,27 +102,62 @@ export default function Home() {
             <Text style={styles.title}>Device found</Text>
             <Text style={{ textAlign: "center" }}>but not connected</Text>
           </View>
+          {!isCustomNetwork ? null : <CustomDeviceCredentials />}
         </>
       ) : (
         <>
-          {!showCreatePlant ? (
+          {currentForm === "wifi_cred" ? (
             <>
               <WiFiNetwork
                 allNetworks={allNetworks.filter((n) => n.SSID != WIFI.ssid)}
                 refetchNetworks={() => checkNetworkAvailability()}
-                onDeviceConnect={() => setShowCreatePlant(true)}
+                onDeviceConnect={() => setCurrentForm("create_plant")}
               />
             </>
-          ) : (
+          ) : null}
+          {currentForm === "create_plant" ? (
             <>
-              <CreatePlant onCreatePlant={() => {}} />
+              <CreatePlant
+                onCreatePlant={(id) => {
+                  setCurrentForm("change_wifi");
+                  setCurrenPlantID(id);
+                }}
+              />
             </>
-          )}
+          ) : null}
+          {currentForm === "change_wifi" ? (
+            <>
+              <ChangeWifi
+                name={currentPlantID ?? WIFI.ssid}
+                onChangeWifi={() => {
+                  clear();
+                  setCurrentForm(undefined);
+                  setCurrenPlantID(undefined);
+                }}
+              />
+            </>
+          ) : null}
         </>
       )}
       <View style={styles.end}>
-        {!connected && ESPNetwork !== null && ESPNetwork !== undefined ? (
+        {!connected ? (
           <>
+            <View style={{ marginBottom: "2%" }}>
+              <Button
+                title={
+                  !isCustomNetwork ? "Custom Device Name" : "Remove Custom Name"
+                }
+                onPress={() => {
+                  if (isCustomNetwork) {
+                    setWifi(WIFI);
+                  } else {
+                    setWifi({ ssid: "", pass: "" });
+                  }
+                  setIsCustomNetwork(!isCustomNetwork);
+                }}
+                color="#7393B3"
+              />
+            </View>
             <Button title="Connect" onPress={() => connectToNetwork()} />
           </>
         ) : null}

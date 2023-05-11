@@ -18,8 +18,9 @@ export default function Settings() {
         <Text>This app can be used to configure the PlantPal device.</Text>
         <View style={{ marginVertical: "2%" }} />
         <Text>It can do the following:</Text>
-        <Text>* Change network credentials</Text>
+        <Text>* Add device to network</Text>
         <Text>* Add plant(-device) to account</Text>
+        <Text>* Change device name and password</Text>
         <View style={{ marginVertical: "6%" }} />
         <Button
           title="Post an issue or a bug"
